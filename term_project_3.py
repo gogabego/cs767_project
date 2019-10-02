@@ -12,7 +12,6 @@ import gensim
 import logging
 import numpy as np
 import json
-from nltk import word_tokenize
 from keras.models import Model
 from keras.layers import Input, LSTM, Dense
 #configure logging
