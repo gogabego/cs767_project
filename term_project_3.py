@@ -26,10 +26,10 @@ aquarat_test = json.load(open("C:\\Users\\gpinn\\.spyder-py3\\AQuA-master\\AQuA-
 
 list_questions = []
 list_rationales = []
-sentence_questions = []
-sentence_rationales = []
 vectorized_questions = []
 vectorized_rationales = []
+question_vocab = []
+vectorized_qv = {}
 
 #preprocess the data - i.e. tokenize and vectorize.
 for i in range(0, len(aquarat_train)):
@@ -61,6 +61,8 @@ convert it to a vector via the following method - vector summary, root mean squa
 #iterate over all items in list_questions
 for i in range(0, len(list_questions)):
     #for each question, we need to iterate over each word
+    #first part is for vocab, second is for vectorization
+    question_vocab.extend(list_questions[i])
     vectorized_words_in_question = []
     for j in range(0, len(list_questions[i])):
         #for each word, we need the matrix from word2vec
@@ -70,6 +72,12 @@ for i in range(0, len(list_questions)):
     vectorized_questions.append(vectorized_words_in_question)
     
 print(vectorized_questions[1])
+
+#delete duplicates and vectorize dictionary
+question_vocab = (list(set(question_vocab))).sort()
+
+for i in range(0, len(question_vocab)):
+    vectorized_qv[question_vocab[i]] = model_questions[question_vocab[i]]
 
 """
 print(list_questions[25])
