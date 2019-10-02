@@ -58,19 +58,18 @@ So you can actually get vectors from word2vec, but this is in the form of a 1d n
 convert it to a vector via the following method - vector summary, root mean square, sentence vector
 """
 
-#vectorize
+#convert words in each sentence to its vectors
 #iterate over all items in list_questions
 for i in range(0, len(list_questions)):
     #for each question, we need to iterate over each word
+    vectorized_words_in_question = []
     for j in range(0, len(list_questions[i])):
         #for each word, we need the matrix from word2vec
-        individual_word = [(((list_questions[i])[j]))]
-        sentence_vector = 0
-        for k in range(0, len((list_questions[i])[j])):
-            #get the vector of the entire sentence
-            #vectorized_questions += model_questions[(((list_questions[i])[j]))][k]
-            print(model_questions[(((list_questions[i])[j]))])
+        vectorized_words_in_question.append(model_questions[(((list_questions[i])[j]))])
 
+    #now append the list to the list of vectorized questions
+    vectorized_questions.append(vectorized_words_in_question)
+    
 print(vectorized_questions[1])
 
 """
