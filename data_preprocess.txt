@@ -1,0 +1,22 @@
+#preprocess the data - i.e. tokenize and vectorize.
+for i in range(0, len(aquarat_train)):
+    #find a way to replace the numbers with a preprocess - approved token
+    #tokenize the items
+    list_questions.append(gensim.utils.simple_preprocess(aquarat_train[i]['question']))
+    list_rationales.append(gensim.utils.simple_preprocess(aquarat_train[i]['rationale']))
+
+#build/train word2vec
+model_questions = gensim.models.Word2Vec (list_questions, size=150, window=10, min_count=1, workers=10)
+model_questions.train(list_questions,total_examples=len(list_questions),epochs=10)
+
+#convert words in each sentence to its vectors
+#iterate over all items in list_questions
+for i in range(0, len(list_questions)):
+    #for each question, we need to iterate over each word
+    vectorized_words_in_question = []
+    for j in range(0, len(list_questions[i])):
+        #for each word, we need the matrix from word2vec
+        vectorized_words_in_question.append(model_questions[(((list_questions[i])[j]))])
+
+    #now append the list to the list of vectorized questions
+    vectorized_questions.append(vectorized_words_in_question)
