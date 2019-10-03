@@ -87,8 +87,8 @@ for i in range(0, len(list_rationales)):
 q_vocab = (list(set(q_vocab))).sort()
 r_vocab = (list(set(r_vocab))).sort()
 #get length
-qv_length = len(q_vocab)
-rv_length = len(r_vocab)
+qv_size = len(q_vocab)
+rv_size = len(r_vocab)
 #get max lengths
 q_max_length = max([len(text) for text in list_questions])
 r_max_length = max([len(text) for text in list_rationales])
@@ -119,9 +119,9 @@ for pair_text_idx, (input_text, target_text) in enumerate(zip(input_texts, targe
 NUM_HIDDEN_UNITS = 256 # NUM_HIDDEN_LAYERS
 BATCH_SIZE = 64
 NUM_EPOCHS = 100
-"""
+
 #Encoder Architecture
-encoder_inputs = Input(shape=(None, encoder_vocab_size))
+encoder_inputs = Input(shape=(None, qv_size))
 encoder_lstm = LSTM(units=NUM_HIDDEN_UNITS, return_state=True)
 # x-axis: time-step lstm
 encoder_outputs, state_h, state_c = encoder_lstm(encoder_inputs)
@@ -131,7 +131,7 @@ encoder_states = [state_h, state_c] # We discard `encoder_outputs` and only keep
 # We set up our decoder to return full output sequences,
 # and to return internal states as well. We don't use the
 # return states in the training model, but we will use them in inference.
-decoder_inputs = Input(shape=(None, decoder_vocab_size))
+decoder_inputs = Input(shape=(None, rv_size))
 decoder_lstm = LSTM(units=NUM_HIDDEN_UNITS, return_sequences=True, return_state=True)
 # x-axis: time-step lstm
 decoder_outputs, de_state_h, de_state_c = decoder_lstm(decoder_inputs, initial_state=encoder_states) # Set up the decoder, using `encoder_states` as initial state.
@@ -142,4 +142,3 @@ decoder_outputs = decoder_softmax_layer(decoder_outputs)
 # Define the model that will turn, `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
 model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
 model.compile(optimizer="rmsprop", loss="categorical_crossentropy") # Set up model
-"""
