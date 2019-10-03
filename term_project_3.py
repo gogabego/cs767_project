@@ -28,8 +28,10 @@ list_questions = []
 list_rationales = []
 vectorized_questions = []
 vectorized_rationales = []
-vocab = []
+q_vocab = []
+r_vocab = []
 vectorized_qv = {}
+vectorized_rv = {}
 
 #we need some preprocessing for numbers in this 
 #some way to include them, perhaps just writing them?
@@ -43,13 +45,11 @@ for i in range(0, len(aquarat_train)):
     #sentence_questions.extend(gensim.utils.simple_preprocess(aquarat_train[i]['question']))
     #sentence_rationales.extend(gensim.utils.simple_preprocess(aquarat_train[i]['rationale']))
    
-#get all the items in one place 
-list_total_text = []
-list_total_text.extend(list_questions)
-list_total_text.extend(list_rationales)
 #model for all text
-model_text = gensim.models.Word2Vec (list_total_text, size=150, window=10, min_count=1, workers=10)
-model_text.train(list_total_text,total_examples=len(list_total_text),epochs=10)
+model_question = gensim.models.Word2Vec (list_questions, size=150, window=10, min_count=1, workers=10)
+model_question.train(list_questions,total_examples=len(list_questions),epochs=10)
+model_rationale = gensim.models.Word2Vec (list_rationales, size=150, window=10, min_count=1, workers=10)
+model_rationale.train(list_rationales,total_examples=len(list_rationales),epochs=10)
 
 """
 #model for questions
@@ -69,11 +69,11 @@ convert it to a vector via the following method - vector summary, root mean squa
 for i in range(0, len(list_questions)):
     #for each question, we need to iterate over each word
     #first part is for vocab, second is for vectorization
-    vocab.extend(list_questions[i])
+    q_vocab.extend(list_questions[i])
     vectorized_words_in_question= []
     for j in range(0, len(list_questions[i])):
         #for each word, we need the matrix from word2vec
-        vectorized_words_in_question.append(model_text[(((list_questions[i])[j]))])
+        vectorized_words_in_question.append(model_questions[(((list_questions[i])[j]))])
 
     #now append the list to the list of vectorized questions
     vectorized_questions.append(vectorized_words_in_question)
@@ -82,21 +82,26 @@ for i in range(0, len(list_questions)):
 for i in range(0, len(list_rationales)):
     #for each question, we need to iterate over each word
     #first part is for vocab, second is for vectorization
-    vocab.extend(list_rationales[i])
+    r_vocab.extend(list_rationales[i])
     vectorized_words_in_rationale= []
     for j in range(0, len(list_rationales[i])):
         #for each word, we need the matrix from word2vec
-        vectorized_words_in_rationale.append(model_text[(((list_rationales[i])[j]))])
+        vectorized_words_in_rationale.append(model_rationales[(((list_rationales[i])[j]))])
 
     #now append the list to the list of vectorized questions
     vectorized_rationales.append(vectorized_words_in_rationale)    
     
 #delete duplicates and vectorize dictionary
-vocab = (list(set(vocab))).sort()
+q_vocab = (list(set(q_vocab))).sort()
+r_vocab = (list(set(r_vocab))).sort()
 
 #assign dictionary values - key is word, value is array of vectors
-for i in range(0, len(vocab)):
-    vectorized_qv[vocab[i]] = model_questions[vocab[i]]
+for i in range(0, len(q_vocab)):
+    vectorized_qv[q_vocab[i]] = model_questions[q_vocab[i]]
+    
+#do the same for the rationale vocabulary   
+for i in range(0, len(r_vocab)):
+    vectorized_rv[r_vocab[i]] = model_questions[r_vocab[i]]
 
 """
 #Time Step for LSTM Layer
@@ -111,11 +116,12 @@ for pair_text_idx, (input_text, target_text) in enumerate(zip(input_texts, targe
             # decoder_target_data will be ahead by one timestep（LSTM は前タイムステップの隠れ状態を現タイムステップの隠れ状態に使う）
             # decoder_target_data will not include the start character.
             decoder_target_data[pair_text_idx, timestep - 1, inverse_target_vocab[word]] = 1.
+"""
 
 NUM_HIDDEN_UNITS = 256 # NUM_HIDDEN_LAYERS
 BATCH_SIZE = 64
 NUM_EPOCHS = 100
-
+"""
 #Encoder Architecture
 encoder_inputs = Input(shape=(None, encoder_vocab_size))
 encoder_lstm = LSTM(units=NUM_HIDDEN_UNITS, return_state=True)
