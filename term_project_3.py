@@ -28,8 +28,11 @@ list_questions = []
 list_rationales = []
 vectorized_questions = []
 vectorized_rationales = []
-question_vocab = []
+vocab = []
 vectorized_qv = {}
+
+#we need some preprocessing for numbers in this 
+#some way to include them, perhaps just writing them?
 
 #preprocess the data - i.e. tokenize and vectorize.
 for i in range(0, len(aquarat_train)):
@@ -40,18 +43,22 @@ for i in range(0, len(aquarat_train)):
     #sentence_questions.extend(gensim.utils.simple_preprocess(aquarat_train[i]['question']))
     #sentence_rationales.extend(gensim.utils.simple_preprocess(aquarat_train[i]['rationale']))
    
-"""
-for i in range(0, 10):
-    print(list_questions[i])
+#get all the items in one place 
+list_total_text = []
+list_total_text.extend(list_questions)
+list_total_text.extend(list_rationales)
+#model for all text
+model_text = gensim.models.Word2Vec (list_total_text, size=150, window=10, min_count=1, workers=10)
+model_text.train(list_total_text,total_examples=len(list_total_text),epochs=10)
 
 """
-
+#model for questions
 model_questions = gensim.models.Word2Vec (list_questions, size=150, window=10, min_count=1, workers=10)
 model_questions.train(list_questions,total_examples=len(list_questions),epochs=10)
-
-#model_answers = gensim.models.Word2Vec (list_rationales, size=150, window=10, min_count=2, workers=10)
-#model_answers.train(list_rationales,total_examples=len(list_rationales),epochs=10)
-
+#model for answers
+model_answers = gensim.models.Word2Vec (list_rationales, size=150, window=10, min_count=2, workers=10)
+model_answers.train(list_rationales,total_examples=len(list_rationales),epochs=10)
+"""
 """
 So you can actually get vectors from word2vec, but this is in the form of a 1d numpy array
 convert it to a vector via the following method - vector summary, root mean square, sentence vector
@@ -62,31 +69,34 @@ convert it to a vector via the following method - vector summary, root mean squa
 for i in range(0, len(list_questions)):
     #for each question, we need to iterate over each word
     #first part is for vocab, second is for vectorization
-    question_vocab.extend(list_questions[i])
-    vectorized_words_in_question = []
+    vocab.extend(list_questions[i])
+    vectorized_words_in_question= []
     for j in range(0, len(list_questions[i])):
         #for each word, we need the matrix from word2vec
-        vectorized_words_in_question.append(model_questions[(((list_questions[i])[j]))])
+        vectorized_words_in_question.append(model_text[(((list_questions[i])[j]))])
 
     #now append the list to the list of vectorized questions
     vectorized_questions.append(vectorized_words_in_question)
+
+#iterate over all items in list_rationales
+for i in range(0, len(list_rationales)):
+    #for each question, we need to iterate over each word
+    #first part is for vocab, second is for vectorization
+    vocab.extend(list_rationales[i])
+    vectorized_words_in_rationale= []
+    for j in range(0, len(list_rationales[i])):
+        #for each word, we need the matrix from word2vec
+        vectorized_words_in_rationale.append(model_text[(((list_rationales[i])[j]))])
+
+    #now append the list to the list of vectorized questions
+    vectorized_rationales.append(vectorized_words_in_rationale)    
     
-print(vectorized_questions[1])
-
 #delete duplicates and vectorize dictionary
-question_vocab = (list(set(question_vocab))).sort()
+vocab = (list(set(vocab))).sort()
 
-for i in range(0, len(question_vocab)):
-    vectorized_qv[question_vocab[i]] = model_questions[question_vocab[i]]
-
-"""
-print(list_questions[25])
-
-w1 = "plan"
-wlist = ["You", "have", "ten", "apples", "and", "your", "friend"]
-print(model_questions[w1])
-#print(model_questions["plan"])
-"""
+#assign dictionary values - key is word, value is array of vectors
+for i in range(0, len(vocab)):
+    vectorized_qv[vocab[i]] = model_questions[vocab[i]]
 
 """
 #Time Step for LSTM Layer
