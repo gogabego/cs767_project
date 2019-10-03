@@ -52,14 +52,6 @@ model_rationale = gensim.models.Word2Vec (list_rationales, size=150, window=10, 
 model_rationale.train(list_rationales,total_examples=len(list_rationales),epochs=10)
 
 """
-#model for questions
-model_questions = gensim.models.Word2Vec (list_questions, size=150, window=10, min_count=1, workers=10)
-model_questions.train(list_questions,total_examples=len(list_questions),epochs=10)
-#model for answers
-model_answers = gensim.models.Word2Vec (list_rationales, size=150, window=10, min_count=2, workers=10)
-model_answers.train(list_rationales,total_examples=len(list_rationales),epochs=10)
-"""
-"""
 So you can actually get vectors from word2vec, but this is in the form of a 1d numpy array
 convert it to a vector via the following method - vector summary, root mean square, sentence vector
 """
@@ -94,6 +86,12 @@ for i in range(0, len(list_rationales)):
 #delete duplicates and vectorize dictionary
 q_vocab = (list(set(q_vocab))).sort()
 r_vocab = (list(set(r_vocab))).sort()
+#get length
+qv_length = len(q_vocab)
+rv_length = len(r_vocab)
+#get max lengths
+q_max_length = max([len(text) for text in list_questions])
+r_max_length = max([len(text) for text in list_rationales])
 
 #assign dictionary values - key is word, value is array of vectors
 for i in range(0, len(q_vocab)):
