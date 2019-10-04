@@ -1,0 +1,113 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Oct  4 11:41:00 2019
+lab 5
+@author: gpinnell
+"""
+import deap
+from deap import base
+from deap import creator
+from deap import tools
+import random
+
+#utility to convert gray to binary
+def gray_to_binary(binaryinput):
+    stringinput = str(binaryinput)
+    returnitem = ""
+    #first value is same no matter what
+    returnitem += stringinput[0]
+    for i in range(1, len(stringinput)):
+        if(stringinput[i] == "0"):
+            #the two values match
+            #just copy the last value from returnitem
+            returnitem += str(returnitem[-1])
+        else:
+            #there's a mismatch
+            #do the opposite of the last value from returnitem
+            if(returnitem[len(returnitem) - 1] == "0"):
+                returnitem += "1"
+            else:
+                returnitem += "0"
+                
+    return int(returnitem)
+
+#utility to convert binary to gray code
+def gray_code(int_input):
+    return_str = ""
+    #convert to binary, then string, cut first two characters
+    binaryitem = (str(bin(int_input)))[2:]
+    print(binaryitem)
+    #preserve first char
+    return_str += binaryitem[0]
+    #for each char remaining, assess if the numbers are equal
+    for i in range(0, len(binaryitem) - 1):
+        if(binaryitem[i] == binaryitem[i+1]):
+            return_str += "0"
+        else:
+            return_str += "1"
+            
+    return int(return_str)
+
+#utility to convert list to gray codes
+def list_convert_graycode(list_inputs):
+    #declare
+    graycode_dataset = []
+    #we're going to convert each item in dataset to graycode
+    for i in range(0, len(list_inputs)):
+        graycode_dataset.append(bin(gray_code(list_inputs[i])))
+        
+    #return the value
+    return graycode_dataset      
+
+#utility to build the dataset
+def build_dataset():
+    #as per the example problem, fill a list with 0-31
+    list_return = []
+    for i in range(0, 32):
+        list_return.append(i)
+        
+    return list_return
+
+def evaluate(individual):
+    #literally just the magnitude of the square
+    return(max(individual))
+
+if __name__ == "__main__":
+    
+    #declare
+    IND_SIZE = 5
+    toolbox = deap.base.Toolbox()
+    
+    #setup GA
+    creator.create("FitnessMax", base.Fitness, weights=(-1.0, - 1.0))
+    creator.create("Individual", list, fitness=creator.FitnessMax)
+    
+    #setup toolbox
+    toolbox.register("convert_to_greycode", list_convert_graycode)
+    toolbox.register("convert_to_binary", list_convert_binary)
+    toolbox.register("individual", tools.initRepeat, creator.Individual,
+                 toolbox.data, n=IND_SIZE)
+    
+    #verify individual
+    ind1 = toolbox.individual()
+    print(ind1[1])
+    
+    #step 1 - parts a and b
+    #part a - need to define an evaluation function
+    #part b - need to evaluate all inputs
+
+    
+    #step 2 - select
+    #this can be done by way of the deap library
+    
+    
+    #step 3 reproduce
+    #you can do this by crossover, i.e. with the deap library
+    #use the gray codes here, they're meant for crossover
+    #you'll also need a gray code - binary translator
+    
+    
+    #step 4 mutate
+    #you can do this again through the deap library
+    
+    
