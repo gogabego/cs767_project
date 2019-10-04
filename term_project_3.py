@@ -14,6 +14,7 @@ import numpy as np
 import json
 from keras.models import Model
 from keras.layers import Input, LSTM, Dense
+from gensim.parsing.preprocessing import preprocess_string
 #configure logging
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 tf.enable_eager_execution()
@@ -34,15 +35,15 @@ vectorized_qv = {}
 vectorized_rv = {}
 
 #we need some preprocessing for numbers in this 
-#some way to include them, perhaps just writing them?
-
+#try custom preprocess filters
+CUSTOM_FILTERS = [lambda x: x.lower(), strip_tags, strip_punctuation]
 #preprocess the data - i.e. tokenize and vectorize.
 #for i in range(0, len(aquarat_train)):
 for i in range(0, 10):
     #find a way to replace the numbers with a preprocess - approved token
     #tokenize the items
-    list_questions.append(gensim.utils.simple_preprocess(aquarat_train[i]['question']))
-    list_rationales.append(gensim.utils.simple_preprocess(aquarat_train[i]['rationale']))
+    list_questions.append(preprocess_string((aquarat_train[i]['question']), CUSTOM_FILTERS))
+    list_rationales.append(preprocess_string((aquarat_train[i]['rationale']), CUSTOM_FILTERS))
     #sentence_questions.extend(gensim.utils.simple_preprocess(aquarat_train[i]['question']))
     #sentence_rationales.extend(gensim.utils.simple_preprocess(aquarat_train[i]['rationale']))
    
