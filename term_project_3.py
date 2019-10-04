@@ -37,7 +37,8 @@ vectorized_rv = {}
 #some way to include them, perhaps just writing them?
 
 #preprocess the data - i.e. tokenize and vectorize.
-for i in range(0, len(aquarat_train)):
+#for i in range(0, len(aquarat_train)):
+for i in range(0, 10):
     #find a way to replace the numbers with a preprocess - approved token
     #tokenize the items
     list_questions.append(gensim.utils.simple_preprocess(aquarat_train[i]['question']))
