@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sun Sep 29 15:38:00 2019
-
 @author: gpinn
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import tensorflow.compat.v1 as tf
+import tensorflow as tf
 import gensim 
 import logging
 import numpy as np
@@ -17,13 +16,13 @@ from keras.layers import Input, LSTM, Dense
 from gensim.parsing.preprocessing import preprocess_string, strip_tags, strip_punctuation
 #configure logging
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-tf.enable_eager_execution()
+#tf.enable_eager_execution()
 
 #isolate steps into functions
 #load information
 #download your datasets - two files containing questions & rationales in json files
-aquarat_train = json.load(open("C:\\Users\\gpinn\\.spyder-py3\\AQuA-master\\AQuA-master\\train_without_debtor.tok.json"))
-aquarat_test = json.load(open("C:\\Users\\gpinn\\.spyder-py3\\AQuA-master\\AQuA-master\\test.tok.json"))
+aquarat_train = json.load(open("cs767_project/AQuA-master/AQuA-master/train_without_debtor.tok.json"))
+aquarat_test = json.load(open("cs767_project/AQuA-master/AQuA-master/test.tok.json"))
 
 list_questions = []
 list_rationales = []
@@ -108,7 +107,6 @@ for i in range(0, len(r_vocab)):
 """
 #Time Step for LSTM Layer
 for pair_text_idx, (vectorized_q, vectorized_r) in enumerate(zip(vectorized_q, vectorized_r)):
-
     for timestep, word in enumerate(vectorized_q):
         encoder_input_data[pair_text_idx, timestep, inverse_input_vocab[word]] = 1.
     # decoder_target_data is ahead of decoder_input_data by one timestep
