@@ -1,73 +1,14 @@
-# -*- coding: utf-8 -*-
-'''
-# An implementation of sequence to sequence learning for performing addition
-Input: "535+61"
-Output: "596"
-Padding is handled by using a repeated sentinel character (space)
-Input may optionally be reversed, shown to increase performance in many tasks in:
-"Learning to Execute"
-http://arxiv.org/abs/1410.4615
-and
-"Sequence to Sequence Learning with Neural Networks"
-http://papers.nips.cc/paper/5346-sequence-to-sequence-learning-with-neural-networks.pdf
-Theoretically it introduces shorter term dependencies between source and target.
-Two digits reversed:
-+ One layer LSTM (128 HN), 5k training examples = 99% train/test accuracy in 55 epochs
-Three digits reversed:
-+ One layer LSTM (128 HN), 50k training examples = 99% train/test accuracy in 100 epochs
-Four digits reversed:
-+ One layer LSTM (128 HN), 400k training examples = 99% train/test accuracy in 20 epochs
-Five digits reversed:
-+ One layer LSTM (128 HN), 550k training examples = 99% train/test accuracy in 30 epochs
-'''  # noqa
-
 from __future__ import print_function
 from keras.models import Sequential
 from keras import layers
 import numpy as np
 from six.moves import range
 
+from tensorflow.python.framework.ops import disable_eager_execution
+#disable eager execution
+disable_eager_execution()
 
-class CharacterTable(object):
-    """Given a set of characters:
-    + Encode them to a one-hot integer representation
-    + Decode the one-hot or integer representation to their character output
-    + Decode a vector of probabilities to their character output
-    """
-    def __init__(self, chars):
-        """Initialize character table.
-        # Arguments
-            chars: Characters that can appear in the input.
-        """
-        self.chars = sorted(set(chars))
-        self.char_indices = dict((c, i) for i, c in enumerate(self.chars))
-        self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
-
-    def encode(self, C, num_rows):
-        """One-hot encode given string C.
-        # Arguments
-            C: string, to be encoded.
-            num_rows: Number of rows in the returned one-hot encoding. This is
-                used to keep the # of rows for each data the same.
-        """
-        x = np.zeros((num_rows, len(self.chars)))
-        for i, c in enumerate(C):
-            x[i, self.char_indices[c]] = 1
-        return x
-
-    def decode(self, x, calc_argmax=True):
-        """Decode the given vector or 2D array to their character output.
-        # Arguments
-            x: A vector or a 2D array of probabilities or one-hot representations;
-                or a vector of character indices (used with `calc_argmax=False`).
-            calc_argmax: Whether to find the character index with maximum
-                probability, defaults to `True`.
-        """
-        if calc_argmax:
-            x = x.argmax(axis=-1)
-        return ''.join(self.indices_char[x] for x in x)
-
-
+#for the representation of the results
 class colors:
     ok = '\033[92m'
     fail = '\033[91m'
@@ -78,61 +19,148 @@ TRAINING_SIZE = 50000
 DIGITS = 3
 REVERSE = True
 
+#generate data 
+#we have this, just import it
+aquarat_train = json.load(open("cs767_project/AQuA-master/AQuA-master/train_without_debtor.tok.json"))
+aquarat_test = json.load(open("cs767_project/AQuA-master/AQuA-master/test.tok.json"))
+
+#vectorize data
+list_questions = []
+list_rationales = []
+test_questions = []
+test_rationales = []
+vectorized_questions = []
+vectorized_rationales = []
+vectorized_test_questions = []
+vectorized_test_rationales = []
+q_vocab = []
+r_vocab = []
+vectorized_qv = {}
+vectorized_rv = {}
+
+#we need some preprocessing for numbers in this 
+#try custom preprocess filters
+CUSTOM_FILTERS = [lambda x: x.lower(), strip_tags, strip_punctuation]
+#preprocess the data - i.e. tokenize and vectorize.
+#for i in range(0, len(aquarat_train)):
+for i in range(0, 10):
+    #find a way to replace the numbers with a preprocess - approved token
+    #tokenize the items
+    list_questions.append(preprocess_string((aquarat_train[i]['question']), CUSTOM_FILTERS))
+    list_rationales.append(preprocess_string((aquarat_train[i]['rationale']), CUSTOM_FILTERS))
+    test_questions.append(preprocess_string((aquarat_test[i]['question']), CUSTOM_FILTERS))
+    test_rationales.append(preprocess_string((aquarat_test[i]['rationale']), CUSTOM_FILTERS))
+    #get joint lists for vocab
+    joint_questions = list_questions + test_questions
+    joint_rationales = list_rationales + test_rationales
+   
+#model for all text
+model_question = gensim.models.Word2Vec (joint_questions, size=150, window=10, min_count=1, workers=10)
+model_question.train(joint_questions,total_examples=len(joint_questions),epochs=10)
+model_rationale = gensim.models.Word2Vec (joint_rationales, size=150, window=10, min_count=1, workers=10)
+model_rationale.train(joint_rationales,total_examples=len(joint_rationales),epochs=10)
+
+"""
+So you can actually get vectors from word2vec, but this is in the form of a 1d numpy array
+convert it to a vector via the following method - vector summary, root mean square, sentence vector
+"""
+
+#convert words in each sentence to its vectors
+#iterate over all items in list_questions
+for i in range(0, len(list_questions)):
+    #for each question, we need to iterate over each word
+    #first part is for vocab, second is for vectorization
+    q_vocab.extend(list_questions[i])
+    vectorized_words_in_question= []
+    for j in range(0, len(list_questions[i])):
+        #for each word, we need the matrix from word2vec
+        vectorized_words_in_question.append(model_question[(((list_questions[i])[j]))])
+
+    #now append the list to the list of vectorized questions
+    vectorized_questions.append(vectorized_words_in_question)
+
+#iterate over all items in list_rationales
+for i in range(0, len(list_rationales)):
+    #for each question, we need to iterate over each word
+    #first part is for vocab, second is for vectorization
+    r_vocab.extend(list_rationales[i])
+    vectorized_words_in_rationale= []
+    for j in range(0, len(list_rationales[i])):
+        #for each word, we need the matrix from word2vec
+        vectorized_words_in_rationale.append(model_rationale[(((list_rationales[i])[j]))])
+
+    #now append the list to the list of vectorized questions
+    vectorized_rationales.append(vectorized_words_in_rationale)    
+    
+#iterate over all items in test_questions
+for i in range(0, len(test_questions)):
+    #for each question, we need to iterate over each word
+    #first part is for vocab, second is for vectorization
+    q_vocab.extend(test_questions[i])
+    vectorized_words_in_question= []
+    for j in range(0, len(test_questions[i])):
+        #for each word, we need the matrix from word2vec
+        vectorized_words_in_question.append(model_question[(((test_questions[i])[j]))])
+
+    #now append the list to the list of vectorized questions
+    vectorized_test_questions.append(vectorized_words_in_question)
+    
+#iterate over all items in list_rationales
+for i in range(0, len(test_rationales)):
+    #for each question, we need to iterate over each word
+    #first part is for vocab, second is for vectorization
+    r_vocab.extend(test_rationales[i])
+    vectorized_words_in_rationale= []
+    for j in range(0, len(test_rationales[i])):
+        #for each word, we need the matrix from word2vec
+        vectorized_words_in_rationale.append(model_rationale[(((test_rationales[i])[j]))])
+
+    #now append the list to the list of vectorized questions
+    vectorized_test_rationales.append(vectorized_words_in_rationale)
+    
+#delete duplicates and vectorize dictionary
+q_vocab = (list(set(q_vocab)))
+q_vocab.sort()
+r_vocab = (list(set(r_vocab)))
+r_vocab.sort()
+#get length
+qv_size = len(q_vocab)
+rv_size = len(r_vocab)
+#get max lengths
+q_max_length = max([len(text) for text in list_questions])
+r_max_length = max([len(text) for text in list_rationales])
+
+#assign dictionary values - key is word, value is array of vectors
+for i in range(0, len(q_vocab)):
+    vectorized_qv[q_vocab[i]] = model_question[q_vocab[i]]
+    
+#do the same for the rationale vocabulary   
+for i in range(0, len(r_vocab)):
+    vectorized_rv[r_vocab[i]] = model_rationale[r_vocab[i]]
+    
 # Maximum length of input is 'int + int' (e.g., '345+678'). Maximum length of
 # int is DIGITS.
-MAXLEN = DIGITS + 1 + DIGITS
-
-# All the numbers, plus sign and space for padding.
-chars = '0123456789+ '
-ctable = CharacterTable(chars)
-
-questions = []
-expected = []
-seen = set()
-print('Generating data...')
-while len(questions) < TRAINING_SIZE:
-    f = lambda: int(''.join(np.random.choice(list('0123456789'))
-                    for i in range(np.random.randint(1, DIGITS + 1))))
-    a, b = f(), f()
-    # Skip any addition questions we've already seen
-    # Also skip any such that x+Y == Y+x (hence the sorting).
-    key = tuple(sorted((a, b)))
-    if key in seen:
-        continue
-    seen.add(key)
-    # Pad the data with spaces such that it is always MAXLEN.
-    q = '{}+{}'.format(a, b)
-    query = q + ' ' * (MAXLEN - len(q))
-    ans = str(a + b)
-    # Answers can be of maximum size DIGITS + 1.
-    ans += ' ' * (DIGITS + 1 - len(ans))
-    if REVERSE:
-        # Reverse the query, e.g., '12+345  ' becomes '  543+21'. (Note the
-        # space used for padding.)
-        query = query[::-1]
-    questions.append(query)
-    expected.append(ans)
-print('Total addition questions:', len(questions))
-
-print('Vectorization...')
-x = np.zeros((len(questions), MAXLEN, len(chars)), dtype=np.bool)
-y = np.zeros((len(questions), DIGITS + 1, len(chars)), dtype=np.bool)
-for i, sentence in enumerate(questions):
-    x[i] = ctable.encode(sentence, MAXLEN)
-for i, sentence in enumerate(expected):
-    y[i] = ctable.encode(sentence, DIGITS + 1)
-
-# Shuffle (x, y) in unison as the later parts of x will almost all be larger
-# digits.
-indices = np.arange(len(y))
-np.random.shuffle(indices)
-x = x[indices]
-y = y[indices]
+#MAXLEN = DIGITS + 1 + DIGITS
+#you already have max length for both q and r, see above.
 
 # Explicitly set apart 10% for validation data that we never train over.
-split_at = len(x) - len(x) // 10
-(x_train, x_val) = x[:split_at], x[split_at:]
-(y_train, y_val) = y[:split_at], y[split_at:]
+#we have this already, just load it and set it up separately
+(x_train, x_val) = np.asarray(vectorized_questions), np.asarray(vectorized_test_questions)
+(y_train, y_val) = np.asarray(vectorized_rationales), np.asarray(vectorized_test_rationales)
+
+#see the model you're working with
+#we need three dimensions
+#print((x_train))
+
+# -everything before this works
+
+#reshape to work as per https://stackoverflow.com/questions/44704435/error-when-checking-model-input-expected-lstm-1-input-to-have-3-dimensions-but
+
+x_train = np.reshape(x_train, (x_train.shape[0], 1))
+x_val = np.reshape(x_val, (x_val.shape[0], 1))
+y_train = np.reshape(x_train, (x_train.shape[0], 1))
+y_val = np.reshape(y_val, (y_val.shape[0], 1))
+
 
 print('Training Data:')
 print(x_train.shape)
@@ -141,6 +169,7 @@ print(y_train.shape)
 print('Validation Data:')
 print(x_val.shape)
 print(y_val.shape)
+
 
 # Try replacing GRU, or SimpleRNN.
 RNN = layers.LSTM
@@ -153,7 +182,9 @@ model = Sequential()
 # "Encode" the input sequence using an RNN, producing an output of HIDDEN_SIZE.
 # Note: In a situation where your input sequences have a variable length,
 # use input_shape=(None, num_feature).
-model.add(RNN(HIDDEN_SIZE, input_shape=(MAXLEN, len(chars))))
+#we're going to try maxlen for questions for this one given it's input
+#model.add(RNN(HIDDEN_SIZE, input_shape=(q_max_length, len(q_vocab))))
+model.add(RNN(HIDDEN_SIZE, input_shape=(1, 10), return_sequences=True))
 # As the decoder RNN's input, repeatedly provide with the last output of
 # RNN for each time step. Repeat 'DIGITS + 1' times as that's the maximum
 # length of output, e.g., when DIGITS=3, max output is 999+999=1998.
