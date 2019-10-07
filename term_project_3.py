@@ -135,6 +135,8 @@ for i in range(0, len(q_vocab)):
 for i in range(0, len(r_vocab)):
     vectorized_rv[r_vocab[i]] = model_rationale[r_vocab[i]]
 
+print((vectorized_rv))
+    
 #create the arrays
 encoder_input_data = np.zeros(
     (len(list_questions), q_max_length, qv_size),
@@ -145,26 +147,20 @@ decoder_input_data = np.zeros(
 decoder_target_data = np.zeros(
     (len(list_rationales), r_max_length, rv_size),
     dtype='float32')
-    
-"""  
-#get inverse vocabs
-inverse_input_vocab = dict(
-    [(word, id) for id, word in enumerate(q_vocab)])
-inverse_target_vocab = dict(
-    [(word, id) for id, word in enumerate(q_vocab)])
+   
 
 #Time Step for LSTM Layer
-for pair_text_idx, (vectorized_q, vectorized_r) in enumerate(zip(vectorized_questions, vectorized_rationales)):
+for pair_text_idx, (vectorized_q, vectorized_r) in enumerate(zip(list_questions, list_rationales)):
     for timestep, word in enumerate(vectorized_q):
-        encoder_input_data[pair_text_idx, timestep, inverse_input_vocab[word]] = 1.
+        encoder_input_data[pair_text_idx, timestep, vectorized_qv[word]] = 1.
     # decoder_target_data is ahead of decoder_input_data by one timestep
     for timestep, word in enumerate(target_text):
-        decoder_input_data[pair_text_idx, timestep, inverse_target_vocab[word]] = 1.
+        decoder_input_data[pair_text_idx, timestep, vectorized_rv[word]] = 1.
         if timestep > 0:
             # decoder_target_data will be ahead by one timestep（LSTM は前タイムステップの隠れ状態を現タイムステップの隠れ状態に使う）
             # decoder_target_data will not include the start character.
-            decoder_target_data[pair_text_idx, timestep - 1, inverse_target_vocab[word]] = 1.
-"""
+            decoder_target_data[pair_text_idx, timestep - 1, vectorized_rv[word]] = 1.
+
 NUM_HIDDEN_UNITS = 256 # NUM_HIDDEN_LAYERS
 BATCH_SIZE = 64
 NUM_EPOCHS = 10
@@ -173,7 +169,6 @@ NUM_EPOCHS = 10
 #encoder_inputs = Input(shape=(None, qv_size))
 encoder_inputs = Input(shape=(1, 10))
 encoder_lstm = LSTM(units=NUM_HIDDEN_UNITS, return_state=True)
-print(type(encoder_lstm))
 # x-axis: time-step lstm
 encoder_outputs, state_h, state_c = encoder_lstm(encoder_inputs)
 encoder_states = [state_h, state_c] # We discard `encoder_outputs` and only keep the states.
