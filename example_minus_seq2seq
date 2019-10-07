@@ -1,0 +1,156 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+import tensorflow as tf
+import gensim 
+import logging
+import numpy as np
+import json
+from keras.models import Model
+from keras.layers import Input, LSTM, Dense
+from gensim.parsing.preprocessing import preprocess_string, strip_tags, strip_punctuation
+#configure logging
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+#tf.enable_eager_execution()
+
+#isolate steps into functions
+#load information
+#download your datasets - two files containing questions & rationales in json files
+aquarat_train = json.load(open("cs767_project/AQuA-master/AQuA-master/train_without_debtor.tok.json"))
+aquarat_test = json.load(open("cs767_project/AQuA-master/AQuA-master/test.tok.json"))
+
+list_questions = []
+list_rationales = []
+vectorized_questions = []
+vectorized_rationales = []
+vectorized_test_questions = []
+vectorized_test_rationales = []
+q_vocab = []
+r_vocab = []
+vectorized_qv = {}
+vectorized_rv = {}
+
+#we need some preprocessing for numbers in this 
+#try custom preprocess filters
+CUSTOM_FILTERS = [lambda x: x.lower(), strip_tags, strip_punctuation]
+#preprocess the data - i.e. tokenize and vectorize.
+#for i in range(0, len(aquarat_train)):
+for i in range(0, 10):
+    #find a way to replace the numbers with a preprocess - approved token
+    #tokenize the items
+    list_questions.append(preprocess_string((aquarat_train[i]['question']), CUSTOM_FILTERS))
+    list_rationales.append(preprocess_string((aquarat_train[i]['rationale']), CUSTOM_FILTERS))
+    test_questions.append(preprocess_string((aquarat_test[i]['question']), CUSTOM_FILTERS))
+    test_rationales.append(preprocess_string((aquarat_test[i]['rationale']), CUSTOM_FILTERS))
+    #get joint lists for vocab
+    joint_questions = list_questions + test_questions
+    joint_rationales = list_rationales + test_rationales
+   
+#model for all text
+model_question = gensim.models.Word2Vec (joint_questions, size=150, window=10, min_count=1, workers=10)
+model_question.train(joint_questions,total_examples=len(joint_questions),epochs=10)
+model_rationale = gensim.models.Word2Vec (joint_rationales, size=150, window=10, min_count=1, workers=10)
+model_rationale.train(joint_rationales,total_examples=len(joint_rationales),epochs=10)
+
+"""
+So you can actually get vectors from word2vec, but this is in the form of a 1d numpy array
+convert it to a vector via the following method - vector summary, root mean square, sentence vector
+"""
+
+#convert words in each sentence to its vectors
+#iterate over all items in list_questions
+for i in range(0, len(list_questions)):
+    #for each question, we need to iterate over each word
+    #first part is for vocab, second is for vectorization
+    q_vocab.extend(list_questions[i])
+    vectorized_words_in_question= []
+    for j in range(0, len(list_questions[i])):
+        #for each word, we need the matrix from word2vec
+        vectorized_words_in_question.extend(model_question[(((list_questions[i])[j]))])
+
+    #now append the list to the list of vectorized questions
+    vectorized_questions.append(vectorized_words_in_question)
+
+#iterate over all items in list_rationales
+for i in range(0, len(list_rationales)):
+    #for each question, we need to iterate over each word
+    #first part is for vocab, second is for vectorization
+    r_vocab.extend(list_rationales[i])
+    vectorized_words_in_rationale= []
+    for j in range(0, len(list_rationales[i])):
+        #for each word, we need the matrix from word2vec
+        vectorized_words_in_rationale.extend(model_rationale[(((list_rationales[i])[j]))])
+
+    #now append the list to the list of vectorized questions
+    vectorized_rationales.append(vectorized_words_in_rationale) 
+    
+#iterate over all items in test_questions
+for i in range(0, len(test_questions)):
+    #for each question, we need to iterate over each word
+    #first part is for vocab, second is for vectorization
+    q_vocab.extend(test_questions[i])
+    vectorized_words_in_question= []
+    for j in range(0, len(test_questions[i])):
+        #for each word, we need the matrix from word2vec
+        vectorized_words_in_question.extend(model_question[(((test_questions[i])[j]))])
+
+    #now append the list to the list of vectorized questions
+    vectorized_test_questions.extend(vectorized_words_in_question)
+    
+#iterate over all items in list_rationales
+for i in range(0, len(test_rationales)):
+    #for each question, we need to iterate over each word
+    #first part is for vocab, second is for vectorization
+    r_vocab.extend(test_rationales[i])
+    vectorized_words_in_rationale= []
+    for j in range(0, len(test_rationales[i])):
+        #for each word, we need the matrix from word2vec
+        vectorized_words_in_rationale.extend(model_rationale[(((test_rationales[i])[j]))])
+
+    #now append the list to the list of vectorized questions
+    vectorized_test_rationales.append(vectorized_words_in_rationale)
+    
+#delete duplicates and vectorize dictionary
+q_vocab = (list(set(q_vocab)))
+q_vocab.sort()
+r_vocab = (list(set(r_vocab)))
+r_vocab.sort()
+#get length
+qv_size = len(q_vocab)
+rv_size = len(r_vocab)
+#get max lengths
+q_max_length = max([len(text) for text in list_questions])
+r_max_length = max([len(text) for text in list_rationales])
+
+#assign dictionary values - key is word, value is array of vectors
+for i in range(0, len(q_vocab)):
+    vectorized_qv[q_vocab[i]] = model_question[q_vocab[i]]
+    
+#do the same for the rationale vocabulary   
+for i in range(0, len(r_vocab)):
+    vectorized_rv[r_vocab[i]] = model_rationale[r_vocab[i]]
+
+#change the vectorized components to arrays
+vectorized_questions = np.asarray(vectorized_questions)
+vectorized_rationales = np.asarray(vectorized_rationales)
+vectorized_test_questions = np.asarray(vectorized_test_questions)
+vectorized_test_rationales = np.asarray(vectorized_test_rationales)
+
+#reshape the data
+x_train = vectorized_questions.reshape(-1, 1, 10)
+x_test  = vectorized_test_questions.reshape(-1, 1, 10)
+y_train = vectorized_rationales.reshape(-1, 1, 10)
+y_test = vectorized_test_rationales.reshape(-1, 1, 10)
+
+print(x_train.shape)
+print(y_train.shape)
+
+model = Sequential()
+model.add(LSTM(100, input_shape=(1, 10), return_sequences=True))
+model.add(LSTM(10, input_shape=(1, 10), return_sequences=True))
+model.compile(loss="mean_absolute_error", optimizer="adam", metrics= ['accuracy'])
+
+#print list lengths
+print(type((joint_questions[0])[0]))
+print(type((joint_rationales[0])[0]))
+  
+history = model.fit(x_train,y_train,epochs=100)
