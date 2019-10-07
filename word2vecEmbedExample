@@ -36,16 +36,16 @@ vectorized_rv = {}
 CUSTOM_FILTERS = [lambda x: x.lower(), strip_tags, strip_punctuation]
 #preprocess the data - i.e. tokenize and vectorize.
 #for i in range(0, len(aquarat_train)):
-for i in range(0, 10):
+for i in range(0, 10000):
     #find a way to replace the numbers with a preprocess - approved token
     #tokenize the items
     list_questions.append(preprocess_string((aquarat_train[i]['question']), CUSTOM_FILTERS))
     list_rationales.append(preprocess_string((aquarat_train[i]['rationale']), CUSTOM_FILTERS))
-    test_questions.append(preprocess_string((aquarat_test[i]['question']), CUSTOM_FILTERS))
-    test_rationales.append(preprocess_string((aquarat_test[i]['rationale']), CUSTOM_FILTERS))
+    #test_questions.append(preprocess_string((aquarat_test[i]['question']), CUSTOM_FILTERS))
+    #test_rationales.append(preprocess_string((aquarat_test[i]['rationale']), CUSTOM_FILTERS))
     #get joint lists for vocab
-    joint_questions = list_questions + test_questions
-    joint_rationales = list_rationales + test_rationales
+    joint_questions = list_questions #+ test_questions
+    joint_rationales = list_rationales #+ test_rationales
 
     
 max_sentence_len = 0
