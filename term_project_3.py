@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Created on Sun Sep 29 15:38:00 2019
 @author: gpinn
@@ -134,9 +135,26 @@ for i in range(0, len(q_vocab)):
 for i in range(0, len(r_vocab)):
     vectorized_rv[r_vocab[i]] = model_rationale[r_vocab[i]]
 
-"""
+#create the arrays
+encoder_input_data = np.zeros(
+    (len(list_questions), q_max_length, qv_size),
+    dtype='float32')
+decoder_input_data = np.zeros(
+    (len(list_rationales), r_max_length, rv_size),
+    dtype='float32')
+decoder_target_data = np.zeros(
+    (len(list_rationales), r_max_length, rv_size),
+    dtype='float32')
+    
+"""  
+#get inverse vocabs
+inverse_input_vocab = dict(
+    [(word, id) for id, word in enumerate(q_vocab)])
+inverse_target_vocab = dict(
+    [(word, id) for id, word in enumerate(q_vocab)])
+
 #Time Step for LSTM Layer
-for pair_text_idx, (vectorized_q, vectorized_r) in enumerate(zip(vectorized_q, vectorized_r)):
+for pair_text_idx, (vectorized_q, vectorized_r) in enumerate(zip(vectorized_questions, vectorized_rationales)):
     for timestep, word in enumerate(vectorized_q):
         encoder_input_data[pair_text_idx, timestep, inverse_input_vocab[word]] = 1.
     # decoder_target_data is ahead of decoder_input_data by one timestep
@@ -147,7 +165,6 @@ for pair_text_idx, (vectorized_q, vectorized_r) in enumerate(zip(vectorized_q, v
             # decoder_target_data will not include the start character.
             decoder_target_data[pair_text_idx, timestep - 1, inverse_target_vocab[word]] = 1.
 """
-
 NUM_HIDDEN_UNITS = 256 # NUM_HIDDEN_LAYERS
 BATCH_SIZE = 64
 NUM_EPOCHS = 10
@@ -193,7 +210,5 @@ y_train = vectorized_rationales.reshape(-1, 1, 10)
 y_test = vectorized_test_rationales.reshape(-1, 1, 10)
 
 #works up to this point
-model.fit(x_train, y_train,
-              batch_size=BATCH_SIZE,
-              epochs=1
-         )
+model.fit(x=[encoder_input_data, decoder_input_data], y=decoder_target_data,
+          batch_size=BATCH_SIZE, epochs=NUM_EPOCHS, validation_split=0.2) 
