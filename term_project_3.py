@@ -7,14 +7,14 @@ Created on Sun Sep 29 15:38:00 2019
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import gensim 
 import logging
 import numpy as np
 import json
 from keras.models import Model
 from keras.layers import Input, LSTM, Dense
-from gensim.parsing.preprocessing import preprocess_string
+from gensim.parsing.preprocessing import preprocess_string, strip_tags, strip_punctuation
 #configure logging
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 tf.enable_eager_execution()
@@ -67,7 +67,7 @@ for i in range(0, len(list_questions)):
     vectorized_words_in_question= []
     for j in range(0, len(list_questions[i])):
         #for each word, we need the matrix from word2vec
-        vectorized_words_in_question.append(model_questions[(((list_questions[i])[j]))])
+        vectorized_words_in_question.append(model_question[(((list_questions[i])[j]))])
 
     #now append the list to the list of vectorized questions
     vectorized_questions.append(vectorized_words_in_question)
@@ -80,14 +80,16 @@ for i in range(0, len(list_rationales)):
     vectorized_words_in_rationale= []
     for j in range(0, len(list_rationales[i])):
         #for each word, we need the matrix from word2vec
-        vectorized_words_in_rationale.append(model_rationales[(((list_rationales[i])[j]))])
+        vectorized_words_in_rationale.append(model_rationale[(((list_rationales[i])[j]))])
 
     #now append the list to the list of vectorized questions
     vectorized_rationales.append(vectorized_words_in_rationale)    
     
 #delete duplicates and vectorize dictionary
-q_vocab = (list(set(q_vocab))).sort()
-r_vocab = (list(set(r_vocab))).sort()
+q_vocab = (list(set(q_vocab)))
+q_vocab.sort()
+r_vocab = (list(set(r_vocab)))
+r_vocab.sort()
 #get length
 qv_size = len(q_vocab)
 rv_size = len(r_vocab)
@@ -97,17 +99,17 @@ r_max_length = max([len(text) for text in list_rationales])
 
 #assign dictionary values - key is word, value is array of vectors
 for i in range(0, len(q_vocab)):
-    vectorized_qv[q_vocab[i]] = model_questions[q_vocab[i]]
+    vectorized_qv[q_vocab[i]] = model_question[q_vocab[i]]
     
 #do the same for the rationale vocabulary   
 for i in range(0, len(r_vocab)):
-    vectorized_rv[r_vocab[i]] = model_questions[r_vocab[i]]
+    vectorized_rv[r_vocab[i]] = model_rationale[r_vocab[i]]
 
 """
 #Time Step for LSTM Layer
-for pair_text_idx, (input_text, target_text) in enumerate(zip(input_texts, target_texts)):
+for pair_text_idx, (vectorized_q, vectorized_r) in enumerate(zip(vectorized_q, vectorized_r)):
 
-    for timestep, word in enumerate(input_text):
+    for timestep, word in enumerate(vectorized_q):
         encoder_input_data[pair_text_idx, timestep, inverse_input_vocab[word]] = 1.
     # decoder_target_data is ahead of decoder_input_data by one timestep
     for timestep, word in enumerate(target_text):
@@ -120,12 +122,14 @@ for pair_text_idx, (input_text, target_text) in enumerate(zip(input_texts, targe
 
 NUM_HIDDEN_UNITS = 256 # NUM_HIDDEN_LAYERS
 BATCH_SIZE = 64
-NUM_EPOCHS = 100
+NUM_EPOCHS = 10
 
 #Encoder Architecture
 encoder_inputs = Input(shape=(None, qv_size))
 encoder_lstm = LSTM(units=NUM_HIDDEN_UNITS, return_state=True)
+print(type(encoder_lstm))
 # x-axis: time-step lstm
+#the code doesn't work here - it won't take a tf and asks for int, then won't take int and says it needs a tf
 encoder_outputs, state_h, state_c = encoder_lstm(encoder_inputs)
 encoder_states = [state_h, state_c] # We discard `encoder_outputs` and only keep the states.
 
@@ -137,7 +141,7 @@ decoder_inputs = Input(shape=(None, rv_size))
 decoder_lstm = LSTM(units=NUM_HIDDEN_UNITS, return_sequences=True, return_state=True)
 # x-axis: time-step lstm
 decoder_outputs, de_state_h, de_state_c = decoder_lstm(decoder_inputs, initial_state=encoder_states) # Set up the decoder, using `encoder_states` as initial state.
-decoder_softmax_layer = Dense(decoder_vocab_size, activation='softmax')
+decoder_softmax_layer = Dense(rv_size, activation='softmax')
 decoder_outputs = decoder_softmax_layer(decoder_outputs)
 
 #Encoder-Decoder Architecture
