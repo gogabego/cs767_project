@@ -8,6 +8,10 @@ __author__ = 'maxim'
 import numpy as np
 import gensim
 import string
+import json
+
+
+from gensim.parsing.preprocessing import preprocess_string, strip_tags, strip_punctuation
 
 from keras.callbacks import LambdaCallback
 from keras.layers.recurrent import LSTM
@@ -36,7 +40,7 @@ vectorized_rv = {}
 CUSTOM_FILTERS = [lambda x: x.lower(), strip_tags, strip_punctuation]
 #preprocess the data - i.e. tokenize and vectorize.
 #for i in range(0, len(aquarat_train)):
-for i in range(0, 10000):
+for i in range(0, len(list_questions)):
     #find a way to replace the numbers with a preprocess - approved token
     #tokenize the items
     list_questions.append(preprocess_string((aquarat_train[i]['question']), CUSTOM_FILTERS))
@@ -116,7 +120,11 @@ def generate_next(text, num_generated=10):
 def on_epoch_end(epoch, _):
   print('\nGenerating text after epoch: %d' % epoch)
   texts = [
-    'a',
+    'In the coordinate plane , points',
+    'Mike took 5 mock tests before appearing for the GMAT . In each mock test he scored',
+    'The first five numbers in a regular sequence are 4 , 10 , X , 46 , and 94 . What is',
+    '5358 x 51 = ',
+    'The cost of painting the whole surface area of a cube at the rate of'
   ]
   for text in texts:
     sample = generate_next(text)
