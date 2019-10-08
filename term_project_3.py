@@ -26,6 +26,8 @@ aquarat_test = json.load(open("cs767_project/AQuA-master/AQuA-master/test.tok.js
 
 list_questions = []
 list_rationales = []
+test_questions = []
+test_rationales = []
 vectorized_questions = []
 vectorized_rationales = []
 vectorized_test_questions = []
@@ -57,10 +59,11 @@ model_question.train(joint_questions,total_examples=len(joint_questions),epochs=
 model_rationale = gensim.models.Word2Vec (joint_rationales, size=150, window=10, min_count=1, workers=10)
 model_rationale.train(joint_rationales,total_examples=len(joint_rationales),epochs=10)
 
-"""
-So you can actually get vectors from word2vec, but this is in the form of a 1d numpy array
-convert it to a vector via the following method - vector summary, root mean square, sentence vector
-"""
+#get weights of the models
+mq_weight = model_question.wv.syn0
+mr_weight = model_rationale.wv.syn0
+qm_size, qme_size = mq_weight.shape
+qr_size, qre_size = mr_weight.shape
 
 #convert words in each sentence to its vectors
 #iterate over all items in list_questions
@@ -134,8 +137,6 @@ for i in range(0, len(q_vocab)):
 #do the same for the rationale vocabulary   
 for i in range(0, len(r_vocab)):
     vectorized_rv[r_vocab[i]] = model_rationale[r_vocab[i]]
-
-print((vectorized_rv))
     
 #create the arrays
 encoder_input_data = np.zeros(
@@ -148,7 +149,7 @@ decoder_target_data = np.zeros(
     (len(list_rationales), r_max_length, rv_size),
     dtype='float32')
    
-
+"""
 #Time Step for LSTM Layer
 for pair_text_idx, (vectorized_q, vectorized_r) in enumerate(zip(list_questions, list_rationales)):
     for timestep, word in enumerate(vectorized_q):
@@ -160,6 +161,11 @@ for pair_text_idx, (vectorized_q, vectorized_r) in enumerate(zip(list_questions,
             # decoder_target_data will be ahead by one timestep（LSTM は前タイムステップの隠れ状態を現タイムステップの隠れ状態に使う）
             # decoder_target_data will not include the start character.
             decoder_target_data[pair_text_idx, timestep - 1, vectorized_rv[word]] = 1.
+"""
+
+#fill the existing input / target arrays with values 
+#start with encoder
+
 
 NUM_HIDDEN_UNITS = 256 # NUM_HIDDEN_LAYERS
 BATCH_SIZE = 64
@@ -167,7 +173,8 @@ NUM_EPOCHS = 10
 
 #Encoder Architecture
 #encoder_inputs = Input(shape=(None, qv_size))
-encoder_inputs = Input(shape=(1, 10))
+encoder_inputs = Input(shape=( 58, 320))
+encoder_embed = Embedding(input_dim=qm_size, output_dim=qme_size, weights=[mq_weight])(encoder_inputs)
 encoder_lstm = LSTM(units=NUM_HIDDEN_UNITS, return_state=True)
 # x-axis: time-step lstm
 encoder_outputs, state_h, state_c = encoder_lstm(encoder_inputs)
@@ -178,7 +185,8 @@ encoder_states = [state_h, state_c] # We discard `encoder_outputs` and only keep
 # and to return internal states as well. We don't use the
 # return states in the training model, but we will use them in inference.
 #decoder_inputs = Input(shape=(None, rv_size))
-decoder_inputs = Input(shape=(1, 10))
+decoder_inputs = Input(shape=(137, 339))
+decoder_embed = Embedding(input_dim=qr_size, output_dim=qre_size, weights=[mr_weight])(decoder_inputs)
 decoder_lstm = LSTM(units=NUM_HIDDEN_UNITS, return_sequences=True, return_state=True)
 # x-axis: time-step lstm
 decoder_outputs, de_state_h, de_state_c = decoder_lstm(decoder_inputs, initial_state=encoder_states) # Set up the decoder, using `encoder_states` as initial state.
@@ -198,12 +206,14 @@ vectorized_rationales = np.asarray(vectorized_rationales)
 vectorized_test_questions = np.asarray(vectorized_test_questions)
 vectorized_test_rationales = np.asarray(vectorized_test_rationales)
 
+#check the first 10 items
+for i in range(0,10):
+  print(len(vectorized_questions[i]))
+
+
 #reshape the data
-x_train = vectorized_questions.reshape(-1, 1, 10)
-x_test  = vectorized_test_questions.reshape(-1, 1, 10)
-y_train = vectorized_rationales.reshape(-1, 1, 10)
-y_test = vectorized_test_rationales.reshape(-1, 1, 10)
 
 #works up to this point
 model.fit(x=[encoder_input_data, decoder_input_data], y=decoder_target_data,
           batch_size=BATCH_SIZE, epochs=NUM_EPOCHS, validation_split=0.2) 
+          
