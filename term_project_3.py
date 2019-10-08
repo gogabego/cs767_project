@@ -176,21 +176,23 @@ def rationale_idx2word(idx):
 
 #fill the existing input / target arrays with values 
 #start with encoder
+blank = 0
 print('\nPreparing the data for LSTM...')
-encoder_input_data = np.zeros([len(list_questions), q_max_length], dtype=np.int32)
-decoder_input_data = np.zeros([len(list_rationales), r_max_length], dtype=np.int32)
-decoder_target_data = np.zeros([len(list_rationales)], dtype=np.int32)
+encoder_input_data = np.zeros([len(list_questions), q_max_length, blank], dtype=np.int32)
+decoder_input_data = np.zeros([len(list_rationales), r_max_length, blank], dtype=np.int32)
+decoder_target_data = np.zeros([len(list_rationales), r_max_length, blank], dtype=np.int32)
   
 for t, rationale in enumerate(list_rationales):
   for l, word in enumerate(rationale):
     print(word)
     decoder_input_data[t, l] = rationale_word2idx(word)
-      
   decoder_target_data[t] = rationale_word2idx(rationale[-1])
+  
   
 for i, sentence in enumerate(list_questions):
   for t, word in enumerate(sentence[:-1]):
     encoder_input_data[i, t] = question_word2idx(word)
+    
 print('encoder input shape:', encoder_input_data.shape)
 print('decoder input shape:', decoder_input_data.shape)
 print('decoder output shape:', decoder_target_data.shape)
@@ -201,7 +203,7 @@ NUM_EPOCHS = 10
 
 #Encoder Architecture
 #encoder_inputs = Input(shape=(None, qv_size))
-encoder_inputs = Input(shape=(10, 58))
+encoder_inputs = Input(shape=(58, 0))
 encoder_embed = Embedding(input_dim=qm_size, output_dim=qme_size, weights=[mq_weight])(encoder_inputs)
 encoder_lstm = LSTM(units=NUM_HIDDEN_UNITS, return_state=True)
 # x-axis: time-step lstm
@@ -213,12 +215,14 @@ encoder_states = [state_h, state_c] # We discard `encoder_outputs` and only keep
 # and to return internal states as well. We don't use the
 # return states in the training model, but we will use them in inference.
 #decoder_inputs = Input(shape=(None, rv_size))
-decoder_inputs = Input(shape=(10, 137))
+decoder_inputs = Input(shape=(137, 0))
 decoder_embed = Embedding(input_dim=qr_size, output_dim=qre_size, weights=[mr_weight])(decoder_inputs)
 decoder_lstm = LSTM(units=NUM_HIDDEN_UNITS, return_sequences=True, return_state=True)
 # x-axis: time-step lstm
 decoder_outputs, de_state_h, de_state_c = decoder_lstm(decoder_inputs, initial_state=encoder_states) # Set up the decoder, using `encoder_states` as initial state.
-decoder_softmax_layer = Dense(rv_size, activation='softmax')
+#print(rv_size)
+decoder_softmax_layer = Dense(0, activation='softmax')
+print(type(decoder_softmax_layer))
 decoder_outputs = decoder_softmax_layer(decoder_outputs)
 
 #Encoder-Decoder Architecture
@@ -229,18 +233,10 @@ model.compile(optimizer="rmsprop", loss="categorical_crossentropy") # Set up mod
 print(model.summary())
 
 #change the vectorized components to arrays
-vectorized_questions = np.asarray(vectorized_questions)
-vectorized_rationales = np.asarray(vectorized_rationales)
-vectorized_test_questions = np.asarray(vectorized_test_questions)
-vectorized_test_rationales = np.asarray(vectorized_test_rationales)
-
-#check the first 10 items
-for i in range(0,10):
-  print(len(vectorized_questions[i]))
-
 
 #reshape the data
-
+#encoder_input_data = np.reshape(encoder_input_data,(1, 10, 58))
+#decoder_input_data = np.reshape(decoder_input_data,(1, 10, 137))
 #works up to this point
 model.fit(x=[encoder_input_data, decoder_input_data], y=decoder_target_data,
           batch_size=BATCH_SIZE, epochs=NUM_EPOCHS, validation_split=0.2) 
