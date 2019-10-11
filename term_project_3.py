@@ -150,7 +150,6 @@ decoder_target_data = np.zeros(
     (len(list_rationales), r_max_length, rv_size),
     dtype='float32')
    
-
 #Time Step for LSTM Layer
 for pair_text_idx, (vectorized_q, vectorized_r) in enumerate(zip(list_questions, list_rationales)):
     for timestep, word in enumerate(vectorized_q):
@@ -203,9 +202,9 @@ NUM_EPOCHS = 10
 
 #Encoder Architecture
 #encoder_inputs = Input(shape=(None, qv_size))
-encoder_inputs = Input(shape=(58, 0))
+encoder_inputs = Input(shape=(58, ))
 encoder_embed = Embedding(input_dim=qm_size, output_dim=qme_size, weights=[mq_weight])(encoder_inputs)
-encoder_lstm = LSTM(units=NUM_HIDDEN_UNITS, return_state=True)
+encoder_lstm = LSTM(units=NUM_HIDDEN_UNITS, return_sequences=True, return_state=True)
 # x-axis: time-step lstm
 encoder_outputs, state_h, state_c = encoder_lstm(encoder_inputs)
 encoder_states = [state_h, state_c] # We discard `encoder_outputs` and only keep the states.
@@ -215,13 +214,13 @@ encoder_states = [state_h, state_c] # We discard `encoder_outputs` and only keep
 # and to return internal states as well. We don't use the
 # return states in the training model, but we will use them in inference.
 #decoder_inputs = Input(shape=(None, rv_size))
-decoder_inputs = Input(shape=(137, 0))
+decoder_inputs = Input(shape=(137, ))
 decoder_embed = Embedding(input_dim=qr_size, output_dim=qre_size, weights=[mr_weight])(decoder_inputs)
 decoder_lstm = LSTM(units=NUM_HIDDEN_UNITS, return_sequences=True, return_state=True)
 # x-axis: time-step lstm
 decoder_outputs, de_state_h, de_state_c = decoder_lstm(decoder_inputs, initial_state=encoder_states) # Set up the decoder, using `encoder_states` as initial state.
 #print(rv_size)
-decoder_softmax_layer = Dense(0, activation='softmax')
+decoder_softmax_layer = Dense(decoder_LSTM, activation='softmax')
 print(type(decoder_softmax_layer))
 decoder_outputs = decoder_softmax_layer(decoder_outputs)
 
